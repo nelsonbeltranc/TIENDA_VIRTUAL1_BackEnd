@@ -29,13 +29,16 @@ app.use(cors());
 // Middleware para analizar el cuerpo de las solicitudes en formato JSON
 app.use(express.json());
 
+// Suprimir advertencias de deprecación
+process.on('warning', (warning) => {
+  if (warning.name === 'DeprecationWarning') return;
+  console.warn(warning.name, warning.message);
+});
+
 // Conectar a MongoDB usando la URI especificada en las variables de entorno
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,  // Usar el nuevo parser de URL de MongoDB
-  useUnifiedTopology: true, // Usar el nuevo motor de conexión de MongoDB
-})
-.then(() => console.log('Conectado a MongoDB')) // Mensaje si la conexión es exitosa
-.catch((err) => console.error('Error conectando a MongoDB:', err)); // Manejar errores de conexión
+mongoose.connect(process.env.MONGODB_URI)
+  .then(() => console.log('Conectado a MongoDB'))
+  .catch((err) => console.error('Error conectando a MongoDB:', err));
 
 // Definir las rutas de la API
 // Todas las solicitudes a /api/v1/auth se manejarán con las rutas de autenticación
