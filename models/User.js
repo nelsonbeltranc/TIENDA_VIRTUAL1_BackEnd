@@ -1,57 +1,60 @@
-// Importar mongoose para interactuar con MongoDB
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
 
-// Importar bcryptjs para el manejo de contraseñas
-const bcrypt = require('bcryptjs');
-
-// Definir el esquema de usuario
 const userSchema = new mongoose.Schema({
   username: {
-    type: String, // Tipo de dato para el nombre de usuario
-    required: [true, 'Por favor ingrese un nombre de usuario'], // Validación para que sea requerido
-    unique: true, // El nombre de usuario debe ser único en la base de datos
+    type: String,
+    required: [true, 'Por favor ingrese un nombre de usuario'],
+    unique: true,
+    trim: true,
+    minlength: [3, 'El nombre de usuario debe tener al menos 3 caracteres']
   },
   email: {
-    type: String, // Tipo de dato para el email
-    required: [true, 'Por favor ingrese un email'], // Validación para que sea requerido
-    unique: true, // El email debe ser único en la base de datos
-    match: [/^\S+@\S+\.\S+$/, 'Por favor ingrese un email válido'], // Validación con expresión regular para el formato del email
+    type: String,
+    required: [true, 'Por favor ingrese un email'],
+    unique: true,
+    trim: true,
+    lowercase: true,
+    match: [/^\S+@\S+\.\S+$/, 'Por favor ingrese un email válido']
   },
   password: {
-    type: String, // Tipo de dato para la contraseña
-    required: [true, 'Por favor ingrese una contraseña'], // Validación para que sea requerido
-    minlength: 6, // La contraseña debe tener al menos 6 caracteres
+    type: String,
+    required: [true, 'Por favor ingrese una contraseña'],
+    minlength: [10, 'La contraseña debe tener al menos 10 caracteres']
   },
   role: {
-    type: String, // Tipo de dato para el rol del usuario
-    enum: ['customer', 'admin'], // Rol permitido: 'customer' o 'admin'
-    default: 'customer', // Rol por defecto es 'customer'
-  },
-}, {
-  timestamps: true, // Agregar campos de createdAt y updatedAt automáticamente
-});
-
-// Middleware pre-save para hashear la contraseña antes de guardarla
-userSchema.pre('save', async function(next) {
-  // Si la contraseña no ha sido modificada, pasar al siguiente middleware
-  if (!this.isModified('password')) {
-    return next();
+    type: String,
+    enum: ['customer', 'admin'],
+    default: 'customer'
   }
-  // Generar un 'salt' para el hashing
-  const salt = await bcrypt.genSalt(10);
-  // Hashear la contraseña antes de guardarla
-  this.password = await bcrypt.hash(this.password, salt);
-  next(); // Pasar al siguiente middleware
+}, {
+  timestamps: true
 });
 
-// Método para comparar la contraseña ingresada con la almacenada
+userSchema.pre('save', async function(next) {
+  if (!this.isModified('password')) return next();
+  try {
+    const salt = await bcrypt.genSalt(10);
+    this.password = await bcrypt.hash(this.password, salt);
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 userSchema.methods.matchPassword = async function(enteredPassword) {
-  // Comparar la contraseña ingresada con la hasheada en la base de datos
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Crear el modelo de usuario usando el esquema definido
+userSchema.methods.generateAuthToken = function() {
+  return jwt.sign({ id: this._id }, process.env.JWT_SECRET, {
+    expiresIn: '30d'
+  });
+};
+
+userSchema.index({ email: 1, username: 1 });
+
 const User = mongoose.model('User', userSchema);
 
-// Exportar el modelo para que pueda ser utilizado en otros módulos
 module.exports = User;

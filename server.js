@@ -6,6 +6,7 @@ const mongoose = require('mongoose');
 
 // Importar cors para permitir solicitudes de diferentes orígenes (Cross-Origin Resource Sharing)
 const cors = require('cors');
+const cookieParser = require('cookie-parser');
 
 // Importar dotenv para manejar variables de entorno desde un archivo .env
 const dotenv = require('dotenv');
@@ -37,6 +38,7 @@ process.on('warning', (warning) => {
 
 // Conectar a MongoDB usando la URI especificada en las variables de entorno
 mongoose.connect(process.env.MONGODB_URI)
+
   .then(() => console.log('Conectado a MongoDB'))
   .catch((err) => console.error('Error conectando a MongoDB:', err));
 
@@ -50,7 +52,9 @@ app.use('/api/v1/products', productRoutes);
 // Rutas para órdenes
 app.use('/api/v1/orders', orderRoutes);
 // Rutas para usuarios
-app.use('/api/v1/users', userRoutes);
+app.use('/api/users', userRoutes);
+
+app.use(cookieParser());
 
 // Manejo de errores para la aplicación
 app.use((err, req, res, next) => {
